@@ -1,0 +1,45 @@
+@import "version.inc" ;
+@import "outercurve.inc" ;
+
+package {
+    name: "gsl-dev[${flavor}]";
+    version: "${package-version}";
+    arch : "${arch}";
+
+    display-name: "gsl Developer library";
+}
+
+metadata {
+    summary: "The gsl developer library";
+    description: @"The GNU Scientific Library (GSL) is a numerical library for C and C++ programmers"; 
+
+    icon: @"gsl.png";
+    
+    author-version : "1.15";
+    bug-tracker: "https://github.com/coapp-packages/gsl/issues";
+    stability : "0";
+    licenses : {
+        GPL
+    };
+}
+
+files[libs] {
+    root: @"..\build.vc10\${arch}\Release\bin\";
+    
+    include: {
+        "*.lib",
+    };
+    
+    trim-path: all;
+};
+
+requires {
+    package: "gsl-dev-common-${package-version}-any-${Package.PublicKeyToken}";
+    package: "gsl[${flavor}]-${package-version}-${Package.Architecture}-${Package.PublicKeyToken}";
+}
+
+developer-library[gsl] {
+    libraries : {
+        libs
+    };
+}

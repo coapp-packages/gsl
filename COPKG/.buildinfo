@@ -1,0 +1,154 @@
+/* target information */
+@import "version.inc";
+
+
+#product-info  {
+	product-name: "gsl";
+	version: "1.15";
+	original-source-location: "";
+	original-source-website: "";
+	license: "GPL";
+	packager: "Hamish C";
+}
+
+test {
+    default : false;
+    uses: release;
+    build-command: @"
+	    rem";
+};
+
+package {
+    
+    default : false;
+    uses : sign;
+    
+    targets: { 
+        @"copkg\gsl[vc10]-${package-version}-x86.msi",
+        @"copkg\gsl-dev[vc10]-${package-version}-x86.msi",
+        @"copkg\gsl-dev-common-${package-version}-any.msi",
+        @"copkg\gsl[vc10]-${package-version}-x64.msi",
+        @"copkg\gsl-dev[vc10]-${package-version}-x64.msi"
+    };
+    
+    build-command : @"
+        REM THERE IS SOME GOOFY STUFF IN HERE TO WORK AROUND A COUPLE BUGS IN AUTOPACKAGE.
+        REM FIXES COMING SOON...
+        cd COPKG
+        coapp add-feed %cd%\
+        coapp --force-scan list 
+        autopackage gsl-dev-common.autopkg || goto failed
+        coapp --force-scan list 
+        autopackage gsl[vc10]-x86.autopkg gsl-dev[vc10]-x86.autopkg || goto failed
+        coapp --force-scan list 
+        autopackage gsl[vc10]-x64.autopkg gsl-dev[vc10]-x64.autopkg || goto failed
+        coapp --force-scan list 
+        coapp remove-feed %cd%\
+        ptk update-version
+    ";
+
+	clean-command: @"del COPKG\*.msi COPKG\*.wixpdb";
+	
+};
+
+
+update-version {
+    default : false;
+    
+    build-command : @"
+        REM auto-increment version.inc file...
+        
+        cd COPKG
+        setlocal EnableDelayedExpansion
+        for /F ""tokens=4,5,6,7  delims=.; "" %%v in (version.inc) do (
+            set /a build=%%y + 1
+            set VERSTRING=#define { package-version: %%v.%%w.%%x.!build!; }
+        )
+        echo !VERSTRING! > version.inc
+    ";
+}
+
+release {
+    set: BuildCfg="Release";
+    uses: x86;
+    uses: x64;
+};
+
+sign {
+    default : false;
+    uses: release;
+    build-command: @"simplesigner.exe --nologo --sign build.vc10\x86\Release\bin**.dll build.vc10\x86\Release\bin\**.exe build.vc10\x64\Release\bin\**.dll build.vc10\x64\Release\bin\**.exe";
+};
+
+
+x86 {
+    default : false;
+    compiler: vc10;
+    platform: x86;
+    
+    targets: { 
+		"build.vc10\x86\Release\bin\cblas.dll",
+		"build.vc10\x86\Release\bin\cblas.lib",
+		"build.vc10\x86\Release\bin\cblas_static.lib",
+		"build.vc10\x86\Release\bin\gsl.dll",
+		"build.vc10\x86\Release\bin\gsl.lib",
+		"build.vc10\x86\Release\bin\gsl_static.lib",
+		"build.vc10\x86\Release\bin\gsldefs.exe",
+		"build.vc10\x86\Release\bin\gslhdrs.exe",
+	};
+	
+    build-command:@"
+		msbuild /p:Platform=win32 /p:Configuration=Release build.vc10\gslhdrs\gslhdrs.vcxproj
+          pushd build.vc10\gslhdrs
+          x86\Release\bin\gslhdrs.exe
+          rmdir /s /q x86
+          popd
+		msbuild /p:Platform=win32 /p:Configuration=Release build.vc10\gsl.dll.sln
+		msbuild /p:Platform=win32 /p:Configuration=Release build.vc10\gsl.lib.sln
+	";
+    
+    clean-command:@"
+       msbuild /p:Platform=win32 /p:Configuration=Release /target:Clean build.vc10\gsl.dll.sln
+	  msbuild /p:Platform=win32 /p:Configuration=Release /target:Clean build.vc10\gsl.lib.sln
+       del /s /q gsl\*.h
+       del /s /q build.vc10\gsldefs\*.def       
+       if exist build.vc10\x86 rmdir /s /q build.vc10\x86 > nul 2> nul
+       del /S /Q /A - *.sdf *.suo *.user *.exe *.pdb > nul 2>NUL
+    ";
+};
+
+x64{
+    default : false;
+    compiler: vc10;
+    platform: x64;
+    
+    targets: { 
+		"build.vc10\x64\Release\bin\cblas.dll",
+		"build.vc10\x64\Release\bin\cblas.lib",
+		"build.vc10\x64\Release\bin\cblas_static.lib",
+		"build.vc10\x64\Release\bin\gsl.dll",
+		"build.vc10\x64\Release\bin\gsl.lib",
+		"build.vc10\x64\Release\bin\gsl_static.lib",
+		"build.vc10\x64\Release\bin\gsldefs.exe",
+		"build.vc10\x64\Release\bin\gslhdrs.exe",
+	};
+	
+    build-command:@"
+		msbuild /p:Platform=x64 /p:Configuration=Release build.vc10\gslhdrs\gslhdrs.vcxproj
+          pushd build.vc10\gslhdrs
+          x64\Release\bin\gslhdrs.exe
+          rmdir /s /q x64
+          popd
+		msbuild /p:Platform=x64 /p:Configuration=Release build.vc10\gsl.dll.sln
+		msbuild /p:Platform=x64 /p:Configuration=Release build.vc10\gsl.lib.sln
+	";
+    
+    clean-command:@"
+       msbuild /p:Platform=x64 /p:Configuration=Release /target:Clean build.vc10\gsl.dll.sln
+	  msbuild /p:Platform=x64 /p:Configuration=Release /target:Clean build.vc10\gsl.lib.sln
+       del /s /q gsl\*.h
+       del /s /q build.vc10\gsldefs\*.def       
+       if exist build.vc10\x64 rmdir /s /q build.vc10\x64 > nul 2> nul
+       del /S /Q /A - *.sdf *.suo *.user *.exe *.pdb > nul 2>NUL
+    ";
+};

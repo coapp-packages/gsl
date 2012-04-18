@@ -79,9 +79,6 @@
     <Filter Include="multiroot">
       <UniqueIdentifier>{5e79fff3-a053-4e34-a965-909f92c4f7fa}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ntuple">
-      <UniqueIdentifier>{0f068699-2e1f-4ffb-88e9-ab2878798353}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ode">
       <UniqueIdentifier>{e9055cf0-2db0-46cd-9c95-6eb77e043b52}</UniqueIdentifier>
     </Filter>
@@ -138,6 +135,9 @@
     </Filter>
     <Filter Include="ode2">
       <UniqueIdentifier>{ba3b6ec2-459e-4cfd-95d6-0dfb66ea54ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ntuple">
+      <UniqueIdentifier>{0f068699-2e1f-4ffb-88e9-ab2878798353}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

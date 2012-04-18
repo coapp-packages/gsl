@@ -1,0 +1,62 @@
+@import "version.inc" ;
+@import "outercurve.inc" ;
+
+package {
+    name: "gsl-dev-common";
+    version: "${package-version}";
+    arch: any;
+    display-name: "gsl Dev Library-common";
+}
+
+metadata {
+    summary: "The gsl developer library (common)";
+    description: @"The GNU Scientific Library (GSL) is a numerical library for C and C++ programmers"; 
+        
+    icon: @"gsl.png";
+    
+    author-version : "1.15";
+    bug-tracker: "https://github.com/coapp-packages/gsl/issues";
+    stability : "0";
+    licenses : {
+        GPL
+    };
+}
+
+files[headers] {
+    root: "..\\gsl";
+
+    include: {
+		//not sure if we need all these, maybe ill work it out later..
+        "*.h",
+    };
+    
+    trim-path:all;
+    
+    // ensures that all the header files end up in a subfolder called 'include'
+    destination-path:"include";
+}
+
+
+files[docs] {
+    root: "..\\doc\\";
+    include: {
+        "*"
+    };
+    
+    trim-path:all;
+    
+    // ensures that all the documentation files end up in a subfolder called 'docs'
+    destination-path:"docs";
+
+}
+
+// the 'name' of the developer library isn't terribly important...
+developer-library[gsl] {
+    headers: { 
+        headers
+    };
+    
+    docs: {
+        docs
+    };
+}

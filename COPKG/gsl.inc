@@ -1,0 +1,74 @@
+@import "version.inc";
+@import "outercurve.inc";
+
+package {
+    name: "gsl[${flavor}]";
+    version: "${package-version}";
+    arch : "${arch}";
+    display-name: "gsl";
+    location: "http://coapp.org/repository/${OutputFilename}";
+    feed: "http://coapp.org/repository/packages.atom.xml";
+    publisher: "CoApp Project";
+}
+
+metadata {
+    summary: "gsl";
+    description:  @"The GNU Scientific Library (GSL) is a numerical library for C and C++ programmers"; 
+    icon: @"gsl.png";
+    author-version : "1.15";
+    bug-tracker: "https://github.com/coapp-packages/gsl/issues";
+    stability : "0";
+    licenses : {
+        GPL
+    };
+}
+
+license[GPL] {
+    license-url: "";
+    license-type: "GPL";
+}
+
+compatability-policy {
+    minimum: "1.15";
+    maximum: "${OneLessThanCurrent}"; // this is the default
+    versions : {
+        "1.0",
+    }; // if not specified, find the versions by looking at the feeds and finding all the major/minor versions in range.
+}
+
+files[dlls] {
+    root: @"..\build.vc10\${arch}\Release\bin";
+  
+    include: {
+        "*.dll",
+    };
+    
+    trim-path: all;
+};
+
+files[files-to-sign] {
+    include: { 
+        dlls
+    };    
+}
+
+assembly[gsl[${flavor}]] {
+    include : {
+        dlls
+    };
+}
+
+signing {
+    attributes : {
+        company="Outercurve Foundation",
+        description="gsl",
+        product-name="gsl",
+        product-version="${package-version}",
+        file-version="${package-version}",
+    };
+    
+    replace-signature: true; 
+    include: { 
+        files-to-sign
+    };    
+}
