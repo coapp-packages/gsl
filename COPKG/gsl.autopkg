@@ -1,6 +1,11 @@
 @import "version.inc";
 @import "outercurve.inc";
 
+#define { 
+    flavor: "${COMP??vc10}"; 
+    arch : "${PLAT??x86}";
+}
+
 package {
     name: "gsl[${flavor}]";
     version: "${package-version}";

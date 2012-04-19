@@ -5,21 +5,45 @@
 #product-info  {
 	product-name: "gsl";
 	version: "1.15";
-	original-source-location: "";
-	original-source-website: "";
+	original-source-location: "ftp://ftp.gnu.org/gnu/gsl/gsl-1.15.tar.gz";
+	original-source-website: "http://www.gnu.org/software/gsl/";
 	license: "GPL";
 	packager: "Hamish C";
 }
 
 test {
+    set: {
+        COMPILERS="${COMPILERS??vc10}";
+        PLAT="${PLAT??x86,x64}";
+    };
+
     default : false;
     uses: release;
     build-command: @"
-	    rem";
+	    for %%A in (${COMPILERS}) do (
+            for %%B in (${PLAT}) do (
+                call :testroutine ""%%A"" ""%%B""
+            )
+        )
+        goto :eof
+
+:testroutine
+        pushd build.%~1\%~2\Release\bin\
+        
+        rem do tests here
+
+        goto passed
+:failed
+        echo ""Test(s) failed for (%~1,%~2)""
+:passed
+        popd
+        goto :eof
+    ";
 };
 
 package {
-    
+    set: COMP="${COMP??vc10}";
+    set: PLAT="${PLAT??x86, x64}";
     default : false;
     uses : sign;
     
@@ -32,24 +56,22 @@ package {
     };
     
     build-command : @"
-        REM THERE IS SOME GOOFY STUFF IN HERE TO WORK AROUND A COUPLE BUGS IN AUTOPACKAGE.
-        REM FIXES COMING SOON...
-        cd COPKG
-        coapp add-feed %cd%\
-        coapp --force-scan list 
+         pushd COPKG
         autopackage gsl-dev-common.autopkg || goto failed
-        coapp --force-scan list 
-        autopackage gsl[vc10]-x86.autopkg gsl-dev[vc10]-x86.autopkg || goto failed
-        coapp --force-scan list 
-        autopackage gsl[vc10]-x64.autopkg gsl-dev[vc10]-x64.autopkg || goto failed
-        coapp --force-scan list 
-        coapp remove-feed %cd%\
+        
+        for %%A in (${COMP}) do (
+            for %%B in (${PLAT}) do (
+                autopackage --COMP=%%A --PLAT=%%B gsl.autopkg gsl-dev.autopkg || goto failed
+            )
+        )
+        popd
         ptk update-version
     ";
 
 	clean-command: @"del COPKG\*.msi COPKG\*.wixpdb";
-	
 };
+
+
 
 
 update-version {
@@ -58,97 +80,103 @@ update-version {
     build-command : @"
         REM auto-increment version.inc file...
         
-        cd COPKG
+        pushd COPKG
         setlocal EnableDelayedExpansion
         for /F ""tokens=4,5,6,7  delims=.; "" %%v in (version.inc) do (
             set /a build=%%y + 1
             set VERSTRING=#define { package-version: %%v.%%w.%%x.!build!; }
         )
         echo !VERSTRING! > version.inc
+        popd
     ";
 }
 
 release {
-    set: BuildCfg="Release";
-    uses: x86;
-    uses: x64;
+    set: {
+        COMPILERS="${COMPILERS??vc10}";
+        PLAT="${PLAT??x86, x64}";
+        CONFIG="Release";
+    };
+
+    build-command: @"
+        for %%A in (${COMPILERS}) do (
+            for %%B in (${PLAT}) do (
+			    ptk -nologo base --CONFIG=${CONFIG} --COMP=%%A --PLAT=%%B
+		    )
+        )
+    ";
 };
 
 sign {
     default : false;
     uses: release;
-    build-command: @"simplesigner.exe --nologo --sign build.vc10\x86\Release\bin**.dll build.vc10\x86\Release\bin\**.exe build.vc10\x64\Release\bin\**.dll build.vc10\x64\Release\bin\**.exe";
+    build-command: @"simplesigner.exe --nologo --sign build.vc10\**.dll build.vc10\**.exe";
 };
-
 
 x86 {
-    default : false;
-    compiler: vc10;
-    platform: x86;
-    
-    targets: { 
-		"build.vc10\x86\Release\bin\cblas.dll",
-		"build.vc10\x86\Release\bin\cblas.lib",
-		"build.vc10\x86\Release\bin\cblas_static.lib",
-		"build.vc10\x86\Release\bin\gsl.dll",
-		"build.vc10\x86\Release\bin\gsl.lib",
-		"build.vc10\x86\Release\bin\gsl_static.lib",
-		"build.vc10\x86\Release\bin\gsldefs.exe",
-		"build.vc10\x86\Release\bin\gslhdrs.exe",
-	};
-	
-    build-command:@"
-		msbuild /p:Platform=win32 /p:Configuration=Release build.vc10\gslhdrs\gslhdrs.vcxproj
-          pushd build.vc10\gslhdrs
-          x86\Release\bin\gslhdrs.exe
-          rmdir /s /q x86
-          popd
-		msbuild /p:Platform=win32 /p:Configuration=Release build.vc10\gsl.dll.sln
-		msbuild /p:Platform=win32 /p:Configuration=Release build.vc10\gsl.lib.sln
-	";
-    
-    clean-command:@"
-       msbuild /p:Platform=win32 /p:Configuration=Release /target:Clean build.vc10\gsl.dll.sln
-	  msbuild /p:Platform=win32 /p:Configuration=Release /target:Clean build.vc10\gsl.lib.sln
-       del /s /q gsl\*.h
-       del /s /q build.vc10\gsldefs\*.def       
-       if exist build.vc10\x86 rmdir /s /q build.vc10\x86 > nul 2> nul
-       del /S /Q /A - *.sdf *.suo *.user *.exe *.pdb > nul 2>NUL
-    ";
+    set: PLAT=x86;
+    uses: base;
 };
 
-x64{
-    default : false;
-    compiler: vc10;
-    platform: x64;
-    
+x64 {
+    set: PLAT=x64;
+    uses: base;
+};
+
+base {
+    set: {
+        CONFIG="${CONFIG??Release}";
+        COMP="${COMP??vc10}";
+        PLAT="${PLAT??x86}";
+    };
+
+    compiler:"${COMP}";
+    platform:"${PLAT}";
+
     targets: { 
-		"build.vc10\x64\Release\bin\cblas.dll",
-		"build.vc10\x64\Release\bin\cblas.lib",
-		"build.vc10\x64\Release\bin\cblas_static.lib",
-		"build.vc10\x64\Release\bin\gsl.dll",
-		"build.vc10\x64\Release\bin\gsl.lib",
-		"build.vc10\x64\Release\bin\gsl_static.lib",
-		"build.vc10\x64\Release\bin\gsldefs.exe",
-		"build.vc10\x64\Release\bin\gslhdrs.exe",
+		"build.${COMP}\${PLAT}\${CONFIG}\bin\cblas.dll",
+		"build.${COMP}\${PLAT}\${CONFIG}\bin\cblas.lib",
+		"build.${COMP}\${PLAT}\${CONFIG}\bin\cblas_static.lib",
+		"build.${COMP}\${PLAT}\${CONFIG}\bin\gsl.dll",
+		"build.${COMP}\${PLAT}\${CONFIG}\bin\gsl.lib",
+		"build.${COMP}\${PLAT}\${CONFIG}\bin\gsl_static.lib",
+		"build.${COMP}\${PLAT}\${CONFIG}\bin\gsldefs.exe",
+		"build.${COMP}\${PLAT}\${CONFIG}\bin\gslhdrs.exe",
 	};
 	
     build-command:@"
-		msbuild /p:Platform=x64 /p:Configuration=Release build.vc10\gslhdrs\gslhdrs.vcxproj
-          pushd build.vc10\gslhdrs
-          x64\Release\bin\gslhdrs.exe
-          rmdir /s /q x64
-          popd
-		msbuild /p:Platform=x64 /p:Configuration=Release build.vc10\gsl.dll.sln
-		msbuild /p:Platform=x64 /p:Configuration=Release build.vc10\gsl.lib.sln
+        if ""${PLAT}"" == ""x86"" (
+            msbuild /p:Platform=win32 /p:Configuration=${CONFIG} build.${COMP}\gslhdrs\gslhdrs.vcxproj
+        ) else (
+            msbuild /p:Platform=${PLAT} /p:Configuration=${CONFIG} build.${COMP}\gslhdrs\gslhdrs.vcxproj
+        )
+
+		
+        pushd build.${COMP}\gslhdrs
+        ${PLAT}\${CONFIG}\bin\gslhdrs.exe
+        rmdir /s /q ${PLAT}
+        popd
+        if ""${PLAT}"" == ""x86"" (
+		msbuild /p:Platform=win32 /p:Configuration=${CONFIG} build.${COMP}\gsl.dll.sln
+		msbuild /p:Platform=win32 /p:Configuration=${CONFIG} build.${COMP}\gsl.lib.sln
+        ) else (
+		msbuild /p:Platform=${PLAT} /p:Configuration=${CONFIG} build.${COMP}\gsl.dll.sln
+		msbuild /p:Platform=${PLAT} /p:Configuration=${CONFIG} build.${COMP}\gsl.lib.sln
+        )
 	";
     
     clean-command:@"
-       msbuild /p:Platform=x64 /p:Configuration=Release /target:Clean build.vc10\gsl.dll.sln
-	  msbuild /p:Platform=x64 /p:Configuration=Release /target:Clean build.vc10\gsl.lib.sln
+       if ""${PLAT}"" == ""x86"" (
+          msbuild /p:Platform=win32 /p:Configuration=${CONFIG} /target:Clean build.${COMP}\gsl.dll.sln
+          msbuild /p:Platform=win32 /p:Configuration=${CONFIG} /target:Clean build.${COMP}\gsl.lib.sln
+        ) else (
+          msbuild /p:Platform=${PLAT} /p:Configuration=${CONFIG} /target:Clean build.${COMP}\gsl.dll.sln
+          msbuild /p:Platform=${PLAT} /p:Configuration=${CONFIG} /target:Clean build.${COMP}\gsl.lib.sln
+        )
+
        del /s /q gsl\*.h
-       del /s /q build.vc10\gsldefs\*.def       
-       if exist build.vc10\x64 rmdir /s /q build.vc10\x64 > nul 2> nul
+       del /s /q build.${COMP}\gsldefs\*.def       
+       if exist build.${COMP}\${PLAT} rmdir /s /q build.${COMP}\${PLAT} > nul 2> nul
        del /S /Q /A - *.sdf *.suo *.user *.exe *.pdb > nul 2>NUL
     ";
 };

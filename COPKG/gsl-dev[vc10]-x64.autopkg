@@ -1,8 +1,0 @@
-// details for x64 version of gsl package
-// build with: autopackage gsl-dev[vc10]-x64.autopkg
-@import "gsl-dev.inc" ;
-
-#define { 
-    flavor: "vc10"; 
-    arch : "x64";
-}
